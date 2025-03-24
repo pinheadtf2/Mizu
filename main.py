@@ -1,5 +1,5 @@
 from datetime import datetime
-from os import getenv
+from os import getenv, listdir
 
 import aiohttp
 import discord
@@ -12,15 +12,18 @@ load_dotenv()
 console = Console()
 
 bot = discord.Bot(intents=discord.Intents.all())
-bot.thinking = False
+bot.openai_thinking = False
+bot.openai_message_history = []
 bot.session = None
 
-message_history = []
+# config
+bot.openai_url = "http://100.92.68.7:5000/v1/chat/completions"
+bot.openai_character = "Sabine"
 
 
 @bot.event
 async def on_ready():
-    bot.session = aiohttp.ClientSession()
+    # bot.session = aiohttp.ClientSession()
     console.print(f"{bot.user} is ready and online!")
 
 
@@ -29,30 +32,9 @@ async def hello(ctx: discord.ApplicationContext):
     await ctx.respond("Hey!")
 
 
-@bot.event
-async def on_message(message):
-    if (message.author.id != bot.user.id and message.channel.id == 1353259955733397597 and not bot.thinking):
-        bot.thinking = True
-        generated_response = None
-
-        async with message.channel.typing():
-            now = datetime.now()
-            formatted_date = now.strftime("%A, %B %d, %Y, at %I:%M %p")
-            history = [{
-                "role": "system",
-                "content": f"You're Sabine in this discussion with a member of the Discord server {message.guild.name}. "
-                           f"There may be other members who have chatted with you before. Keep your responses short, appropriate, and in-character. "
-                           f"The date is {formatted_date}."
-            }, {
-                "role": "user",
-                "content": f"[{message.author.name}]: {message.content}"
-            }]
-
-            generated_response, new_history = generate_response(history, message.author.name,
-                                                                message.author.display_name)
-
-        await message.reply(generated_response)
-        bot.thinking = False
+for filename in listdir('./cogs'):
+    if filename.endswith('.py'):
+        bot.load_extension(f'cogs.{filename[:-3]}')
 
 
 if __name__ == '__main__':
