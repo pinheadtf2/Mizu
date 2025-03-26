@@ -18,8 +18,8 @@ settings = None
 with open("settings.yaml") as stream:
     try:
         settings = list(yaml.safe_load_all(stream))
-    except yaml.YAMLError as exc:
-        console.log(exc)
+    except yaml.YAMLError as error:
+        console.log(error)
         exit(1)  # fuck that im not going any further
 
 bot = discord.Bot(
@@ -34,10 +34,18 @@ bot.chatbot_settings = settings[1]
 bot.chatbot_thinking = False
 bot.chatbot_message_history = []
 
+with open(
+        f"data/characters/{bot.chatbot_settings["default_character"]}/{bot.chatbot_settings["default_character"]}.yaml") as stream:
+    try:
+        bot.chatbot_character = yaml.safe_load(stream)
+    except yaml.YAMLError as error:
+        console.log(error)
+        exit(1)
+
 
 @bot.event
 async def on_ready():
-    await bot.change_presence(activity=discord.Game('Peeping'), status=discord.Status.online)
+    await bot.change_presence(activity=discord.Game('oobabooga'), status=discord.Status.online)
     console.log(f"{bot.user} started @ {datetime.now().strftime('%I:%M %p, %m/%d/%Y')} | "
                 f"Time to start: {round(time() - start_time, 4)} seconds")
 

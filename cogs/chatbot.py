@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import discord
 from discord.ext import commands
 from requests import HTTPError
 
@@ -10,21 +11,21 @@ class Chatbot(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @discord.slash_command()
+    async def change_character(self, ctx):
+        await ctx.respond('WIP')
+
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.id != self.bot.user.id and message.channel.id == 1353259955733397597 and not self.bot.chatbot_thinking:
             self.bot.chatbot_thinking = True
 
             async with message.channel.typing():
-                now = datetime.now()
-                formatted_date = now.strftime("%A, %B %d, %Y, at %I:%M %p")
                 try:
-                    response = generate_response(self.bot.chatbot_settings, message.author.display_name)
+                    response = generate_response(self.bot.chatbot_character, self.bot.chatbot_settings, message)
                     await message.reply(response)
                 except HTTPError as error:
-                    await message.reply(f"*Unable to generate response.*\n"
-                                        f"**Error Code:**{response.status_code}"
-                                        f"**Response:**{error}")
+                    self.bot.openai_thinking = False
                     raise error
 
             self.bot.openai_thinking = False
