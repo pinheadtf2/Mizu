@@ -1,16 +1,23 @@
-from datetime import datetime
-from typing import Union
 import re
+from datetime import datetime
 
 import discord
 import requests
-from pyexpat.errors import messages
-from requests import Response
 from rich.console import Console
 
 console = Console()
 
+
 def generate_response(character: dict, settings: dict, message: discord.Message) -> str:
+    """
+    hi i like nuts
+
+    :param character: char string
+    :param settings: settings you need to feed in
+    :param message: the discord message
+    :return: returns the ai's response
+    """
+
     # this is probably horrifying to double nest but thats a later me issue
 
     def text_replacement(target_text: str) -> str:
@@ -40,21 +47,22 @@ def generate_response(character: dict, settings: dict, message: discord.Message)
     for example in character["example_dialogue"]:
         example_dialogue += f"{settings["new_roleplay_string"]}{example}\n"
 
-    stop_strings = [f"\n{message.author.global_name}:", f"\n\n{message.author.global_name}:", f"[{message.author.global_name}"]
+    stop_strings = [f"\n{message.author.global_name}:", f"\n\n{message.author.global_name}:",
+                    f"[{message.author.global_name}"]
     payload = {
-        "prompt": f"### Instruction:\n"
-                  f"{text_replacement(settings["instruction"])}"
-                  "### Input:\n" +
-                  text_replacement(character["description"]) +
-                  text_replacement(settings["scenario"]) +
-                  text_replacement(character["personality"]) +
-                  # end user info goes here (name, bio, etc.)
-                  f"{text_replacement(example_dialogue)}" +
-                  settings["new_roleplay_string"] +
-                  f"[You are now chatting live with the members of \"{message.guild.name}\".]"
-                  # chat history & author note (doing this later)
-                  f"{message.author.global_name}: {message.content}"
-                  f"{character["name"]}: ",
+        "prompt": text_replacement(f"### Instruction:\n"
+                                   f"{settings["instruction"]}"
+                                   "### Input:\n" +
+                                   character["description"] +
+                                   settings["scenario"] +
+                                   character["personality"] +
+                                   # end user info goes here (name, bio, etc.)
+                                   f"{example_dialogue}" +
+                                   settings["new_roleplay_string"] +
+                                   f"[You are now chatting live with the members of \"{message.guild.name}\".]"
+                                   # chat history & author note (doing this later)
+                                   f"{message.author.global_name}: {message.content}"
+                                   f"{character["name"]}: "),
         **settings["preset"],
         "stop": stop_strings,
         "stop_strings": stop_strings,
