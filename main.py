@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 from rich.console import Console
 
 start_time = time()
-console = Console()
 
 load_dotenv()
 
@@ -29,25 +28,18 @@ bot = discord.Bot(
     status=discord.Status.dnd,
     activity=discord.Game(name="Initializing...")
 )
+bot.console = Console(width=160)
 bot.core_settings = settings[0]
 bot.chatbot_settings = settings[1]
 bot.chatbot_thinking = False
 bot.chatbot_message_history = []
 
-with open(
-        f"data/characters/{bot.chatbot_settings["default_character"]}/{bot.chatbot_settings["default_character"]}.yaml") as stream:
-    try:
-        bot.chatbot_character = yaml.safe_load(stream)
-    except yaml.YAMLError as error:
-        console.log(error)
-        exit(1)
-
 
 @bot.event
 async def on_ready():
     await bot.change_presence(activity=discord.Game('oobabooga'), status=discord.Status.online)
-    console.log(f"{bot.user} started @ {datetime.now().strftime('%I:%M %p, %m/%d/%Y')} | "
-                f"Time to start: {round(time() - start_time, 4)} seconds")
+    bot.console.log(f"{bot.user} started @ {datetime.now().strftime('%I:%M %p, %m/%d/%Y')} | "
+                    f"Time to start: {round(time() - start_time, 4)} seconds")
 
 
 def owner_only(ctx):
@@ -78,10 +70,10 @@ async def username(ctx,
     old_name = bot.user.name
     try:
         await bot.user.edit(username=name)
-    except discord.HTTPException as error:
-        await ctx.respond(f"**Error:** Username could not be changed. `({error.code})`\n"
-                          f"**HTTP Status:** {error.status}\n"
-                          f"**Error Details:** `{error.text}`",
+    except discord.HTTPException as err:
+        await ctx.respond(f"**Error:** Username could not be changed. `({err.code})`\n"
+                          f"**HTTP Status:** {err.status}\n"
+                          f"**Error Details:** `{err.text}`",
                           ephemeral=True)
     await ctx.respond(f"Successfully changed my username from `{old_name}` to **{bot.user.name}**.", ephemeral=True)
 
@@ -93,10 +85,10 @@ async def avatar(ctx,
                  picture: discord.Attachment):
     try:
         await bot.user.edit(avatar=await picture.read())
-    except discord.HTTPException as error:
-        await ctx.respond(f"**Error:** Avatar could not be changed. `({error.code})`\n"
-                          f"**HTTP Status:** {error.status}\n"
-                          f"**Error Details:** `{error.text}`",
+    except discord.HTTPException as err:
+        await ctx.respond(f"**Error:** Avatar could not be changed. `({err.code})`\n"
+                          f"**HTTP Status:** {err.status}\n"
+                          f"**Error Details:** `{err.text}`",
                           ephemeral=True)
     except discord.InvalidArgument:
         await ctx.respond(f"**Error**: The picture supplied isn't in the right format.",
@@ -105,21 +97,21 @@ async def avatar(ctx,
 
 
 @bot.event
-async def on_application_command_error(ctx: discord.ApplicationContext, error: discord.DiscordException):
-    if isinstance(error, commands.CommandOnCooldown):
+async def on_application_command_error(ctx: discord.ApplicationContext, err: discord.DiscordException):
+    if isinstance(err, commands.CommandOnCooldown):
         await ctx.respond("This command is currently on cooldown!")
     else:
         try:
             await ctx.respond(
                 embed=discord.Embed(
-                    title=error.__class__.__name__,
-                    description=str(error),
+                    title=err.__class__.__name__,
+                    description=str(err),
                     color=discord.Color.red(),
                 ), ephemeral=True
             )
-            raise error
+            raise err
         finally:
-            raise error
+            raise err
 
 
 @bot.slash_command(name="hello", description="Say hello to the bot")

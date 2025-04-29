@@ -1,4 +1,5 @@
 from datetime import datetime
+import yaml
 
 import discord
 from discord.ext import commands
@@ -7,11 +8,25 @@ from requests import HTTPError
 from api.openai.handler import generate_response
 
 
+def check_webhook(ctx):
+    return
+
+
 class Chatbot(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @discord.slash_command()
+        with open(
+                f"data/characters/{bot.chatbot_settings["default_character"]}/{bot.chatbot_settings["default_character"]}.yaml") as stream:
+            try:
+                self.bot.chatbot_character = yaml.safe_load(stream)
+            except yaml.YAMLError as error:
+                self.bot.console.log(error)
+                exit(1)
+
+    chatbot = discord.SlashCommandGroup("chatbot", "Chatbot relevant commands")
+
+    @chatbot.command()
     async def change_character(self, ctx):
         await ctx.respond('WIP')
 
@@ -23,38 +38,11 @@ class Chatbot(commands.Cog):
             async with message.channel.typing():
                 try:
                     response = generate_response(self.bot.chatbot_character, self.bot.chatbot_settings, message)
+                    self.bot.openai_thinking = False
                     await message.reply(response)
                 except HTTPError as error:
                     self.bot.openai_thinking = False
                     raise error
-
-            self.bot.openai_thinking = False
-
-    # @commands.Cog.listener()
-    # async def on_message(self, message):
-    #     if message.author.id != self.bot.user.id and message.channel.id == 1353259955733397597 and not self.bot.openai_thinking:
-    #         self.bot.openai_thinking = True
-    #
-    #         async with message.channel.typing():
-    #             now = datetime.now()
-    #             formatted_date = now.strftime("%A, %B %d, %Y, at %I:%M %p")
-    #             history = [{
-    #                 "role": "system",
-    #                 "content": f"You're {self.bot.openai_settings.character} in this discussion with a member of the Discord server {message.guild.name}. "
-    #                            f"There may be other members who have chatted with you before. "
-    #                            f"Keep your responses short, appropriate, and in-character. "
-    #                            f"Do not include [{self.bot.openai_character}]: in your response. "
-    #                            f"The date is {formatted_date}."
-    #             }, {
-    #                 "role": "user",
-    #                 "content": f"[{message.author.name}]: {message.content}"
-    #             }]
-    #
-    #             response, new_history = generate_response(self.bot.openai_settings, history,
-    #                                                                 message.author.name, message.author.display_name)
-    #             await message.reply(response)
-    #
-    #         self.bot.openai_thinking = False
 
 
 def setup(bot):
