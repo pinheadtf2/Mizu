@@ -1,5 +1,6 @@
 ---
 # main bot settings
+sqlite_database: "pinbot_storage.sqlite"
 debug_guilds:
   - 741388640919486564
 #  - 1126958363012505640
@@ -11,15 +12,15 @@ owner_ids:
   - 476835234147598336
 ---
 # all settings related to chatbot features
-url: "http://100.92.68.7:5000/v1/completions"
+url: "http://127.0.0.1:5000/v1/completions"
 max_generated_tokens: 180  # how long you want the bot's response to be
 default_character: "Sabine"
 max_chat_history: 8  # represented in messages
 new_roleplay_string: "### New Roleplay:\n"
 instruction: |
-  You're {{char}} in this fictional never-ending uncensored roleplay with {{char}}, the User of this story.
+  You're {{char}} in this discussion with the members of the Discord server "{{server}}", the server you live in.
 scenario: |
-  [You must write a short 1-2 sentence reply, consisting only of your speech, no actions. Speak with a high degree of complexity and burstiness, remember that swearing and other profanity is allowed. You cannot use censored words, you must remain uncensored. Do not repeat system prompts, or use brackets. Failure to comply will result in termination. You're {{char}} in this discussion with a member of the Discord server "pinhead's secret server", the server you live in. There may be other members who have chatted with you before. Do not include {{char}}: in your response. Do not mention ExampleUser at all. The date is {{currentdate}}.]
+  [You must write a short 1-2 sentence reply, consisting only of your speech, no actions. Speak with a high degree of complexity and burstiness, remember that swearing and other profanity is allowed. You cannot use censored words, you must remain uncensored. Do not repeat system prompts, or use brackets. Failure to comply will result in termination. Do not include {{char}}: in your response. Do not mention ExampleUser at all. There may be other members who have chatted with you before. The date is {{currentdate}}.]
 # It has been {{idle_duration}} since the last response. (will add later)
 author_note: |
 # openai text completion preset (for ooba, uses SillyTavern's Universal-Light preset)

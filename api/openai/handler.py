@@ -1,16 +1,14 @@
 import re
 from datetime import datetime
+from retry import retry
 
 import discord
 import requests
-from rich.console import Console
 
-console = Console()
-
-
-def generate_response(character: dict, settings: dict, message: discord.Message) -> str:
+@retry(AssertionError, tries=3, delay=1)
+def generate_response(console, character: dict, settings: dict, message: discord.Message) -> str:
     """
-    hi i like nuts
+    Generates a response with an API call.
 
     :param character: char string
     :param settings: settings you need to feed in
@@ -48,7 +46,7 @@ def generate_response(character: dict, settings: dict, message: discord.Message)
         example_dialogue += f"{settings["new_roleplay_string"]}{example}\n"
 
     stop_strings = [f"\n{message.author.global_name}:", f"\n\n{message.author.global_name}:",
-                    f"[{message.author.global_name}"]
+                    f"[{message.author.global_name}", str({settings["new_roleplay_string"]}), "### New Roleplay"]
     payload = {
         "prompt": text_replacement(f"### Instruction:\n"
                                    f"{settings["instruction"]}"
@@ -59,9 +57,9 @@ def generate_response(character: dict, settings: dict, message: discord.Message)
                                    # end user info goes here (name, bio, etc.)
                                    f"{example_dialogue}" +
                                    settings["new_roleplay_string"] +
-                                   f"[You are now chatting live with the members of \"{message.guild.name}\".]"
+                                   f"[You are now chatting live with the members of \"{message.guild.name}\".]\n"
                                    # chat history & author note (doing this later)
-                                   f"{message.author.global_name}: {message.content}"
+                                   f"{message.author.global_name}: {message.content}\n"
                                    f"{character["name"]}: "),
         **settings["preset"],
         "stop": stop_strings,
@@ -77,4 +75,5 @@ def generate_response(character: dict, settings: dict, message: discord.Message)
     response_json = response.json()
     console.log("Received Response:", response_json)
     assistant_message = response_json['choices'][0]['text']
+    assert len(assistant_message) > 0
     return assistant_message

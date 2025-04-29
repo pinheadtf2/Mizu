@@ -1,7 +1,10 @@
+import asyncio
 from datetime import datetime
 from os import getenv, listdir
+from os.path import isfile
 from time import time
 
+import aiosqlite
 import discord
 import yaml
 from discord import option
@@ -9,9 +12,12 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from rich.console import Console
 
-start_time = time()
+from api.sqlite.maintainer import create_database
 
+start_time = time()
 load_dotenv()
+console = Console(width=160, log_time_format="[%H:%M:%S.%f]")
+console.log("[bold blue](init)[/] Starting...")
 
 settings = None
 with open("settings.yaml") as stream:
@@ -20,6 +26,8 @@ with open("settings.yaml") as stream:
     except yaml.YAMLError as error:
         console.log(error)
         exit(1)  # fuck that im not going any further
+console.log("[bold blue](init)[/] Settings loaded")
+
 
 bot = discord.Bot(
     intents=discord.Intents.all(),
@@ -28,18 +36,22 @@ bot = discord.Bot(
     status=discord.Status.dnd,
     activity=discord.Game(name="Initializing...")
 )
-bot.console = Console(width=160)
+bot.console = console
+bot.webhook_cache = {}
 bot.core_settings = settings[0]
 bot.chatbot_settings = settings[1]
 bot.chatbot_thinking = False
 bot.chatbot_message_history = []
+console.log("[bold blue](init)[/] Bot class created")
 
 
 @bot.event
 async def on_ready():
+    bot.database_connection = await aiosqlite.connect(settings[0]['sqlite_database'])
     await bot.change_presence(activity=discord.Game('oobabooga'), status=discord.Status.online)
-    bot.console.log(f"{bot.user} started @ {datetime.now().strftime('%I:%M %p, %m/%d/%Y')} | "
-                    f"Time to start: {round(time() - start_time, 4)} seconds")
+    bot.console.log(f"[bold green](ready)[/] {bot.user} finished ready @ {datetime.now().strftime('%I:%M:%S %p, %m/%d/%Y')}\n"
+                    f"\tStartup: ~{round(time() - start_time, 6)} seconds\n"
+                    f"\tData: {len(bot.guilds)} servers, {len(bot.emojis)} emoji, {len(bot.stickers)} stickers")
 
 
 def owner_only(ctx):
@@ -119,9 +131,17 @@ async def hello(ctx: discord.ApplicationContext):
     await ctx.respond("Hey!")
 
 
+console.log("[bold blue](init)[/] Performing cog initialization...")
 for filename in listdir('./cogs'):
     if filename.endswith('.py'):
         bot.load_extension(f'cogs.{filename[:-3]}')
 
 if __name__ == '__main__':
+    console.log(f"[bold blue](init)[/] Validating {settings[0]['sqlite_database']}...")
+    if not isfile(settings[0]['sqlite_database']):
+        console.log(f"[bold blue](init)[/] Database not found or is corrupted, creating new...")
+        asyncio.run(create_database(settings[0]['sqlite_database']))
+        console.log(f"[bold blue](init)[/] Database {settings[0]['sqlite_database']} created")
+    else:
+        console.log(f"[bold blue](init)[/] Database validated")
     bot.run(getenv("TOKEN"))
