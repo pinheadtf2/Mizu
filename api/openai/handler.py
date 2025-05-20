@@ -1,15 +1,17 @@
 import re
 from datetime import datetime
-from retry import retry
 
 import discord
 import requests
+from retry import retry
+
 
 @retry(AssertionError, tries=3, delay=1)
 def generate_response(console, character: dict, settings: dict, message: discord.Message) -> str:
     """
     Generates a response with an API call.
 
+    :param console: console object, logging purposes
     :param character: char string
     :param settings: settings you need to feed in
     :param message: the discord message

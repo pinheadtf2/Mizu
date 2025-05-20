@@ -16,7 +16,7 @@ from api.sqlite.maintainer import create_database
 
 start_time = time()
 load_dotenv()
-console = Console(width=160, log_time_format="[%H:%M:%S.%f]")
+console = Console(record=True, width=160, log_time_format="[%H:%M:%S.%f]")
 console.log("[bold blue](init)[/] Starting...")
 
 settings = None
@@ -28,13 +28,12 @@ with open("settings.yaml") as stream:
         exit(1)  # fuck that im not going any further
 console.log("[bold blue](init)[/] Settings loaded")
 
-
 bot = discord.Bot(
     intents=discord.Intents.all(),
     debug_guilds=settings[0]["debug_guilds"],
     owner_ids=settings[0]["owner_ids"],
     status=discord.Status.dnd,
-    activity=discord.Game(name="Initializing...")
+    activity=discord.CustomActivity(name="Initializing...", status=discord.Status.do_not_disturb)
 )
 bot.console = console
 bot.webhook_cache = {}
@@ -42,16 +41,18 @@ bot.core_settings = settings[0]
 bot.chatbot_settings = settings[1]
 bot.chatbot_thinking = False
 bot.chatbot_message_history = []
-console.log("[bold blue](init)[/] Bot class created")
+console.log("[bold blue](init)[/] Bot created")
 
 
 @bot.event
 async def on_ready():
     bot.database_connection = await aiosqlite.connect(settings[0]['sqlite_database'])
-    await bot.change_presence(activity=discord.Game('oobabooga'), status=discord.Status.online)
-    bot.console.log(f"[bold green](ready)[/] {bot.user} finished ready @ {datetime.now().strftime('%I:%M:%S %p, %m/%d/%Y')}\n"
-                    f"\tStartup: ~{round(time() - start_time, 6)} seconds\n"
-                    f"\tData: {len(bot.guilds)} servers, {len(bot.emojis)} emoji, {len(bot.stickers)} stickers")
+    await bot.change_presence(activity=discord.CustomActivity(name="Hello!", status=discord.Status.online))
+    bot.console.log(
+        f"[bold green](ready)[/] {bot.user} up and running!\n"
+        f"\tTimestamp:  {datetime.now().strftime('%I:%M:%S %p, %m/%d/%Y')}\n"
+        f"\tStart Time: {round(time() - start_time, 6)} seconds\n"
+        f"\tStatistics: {len(bot.guilds)} servers, {len(bot.emojis)} emoji, {len(bot.stickers)} stickers")
 
 
 def owner_only(ctx):
@@ -126,9 +127,62 @@ async def on_application_command_error(ctx: discord.ApplicationContext, err: dis
             raise err
 
 
-@bot.slash_command(name="hello", description="Say hello to the bot")
-async def hello(ctx: discord.ApplicationContext):
-    await ctx.respond("Hey!")
+cogs = admin.create_subgroup("cogs", "Cog-related commands")
+
+
+async def get_loaded_cogs():
+    loaded_cogs = []
+    for loaded_cog in list(bot.cogs):
+        loaded_cogs.append(f"cogs.{loaded_cog}.{loaded_cog}".lower())
+    return loaded_cogs
+
+
+async def cog_names(ctx: discord.AutocompleteContext):
+    load_choice = ctx.options['load_choice']
+    loaded_cogs = await get_loaded_cogs()
+    if load_choice == 'reload' or load_choice == 'unload':
+        return loaded_cogs
+    else:
+        unloaded_cogs = []
+
+        for filename in listdir('./cogs'):
+            if filename.endswith('.py'):
+                unloaded_cogs.append(f'cogs.{filename[:-3]}'.lower())
+
+        for loaded_cog in loaded_cogs:
+            filter(loaded_cog.__ne__, unloaded_cogs)
+
+        return unloaded_cogs
+
+
+@cogs.command(name="cog", description="Manages the load state of a cog")
+@option("load_choice", description="Choose what you'll do with the cog", choices=['reload', 'load', 'unload'])
+@option("cog_name", description="Select the cog you wish to manage",
+        autocomplete=discord.utils.basic_autocomplete(cog_names))
+@commands.is_owner()
+async def cog(ctx,
+              load_choice: str,
+              cog_name: str
+              ):
+    interaction = await ctx.respond(f"*Attempting to {load_choice} cog {cog_name}...*", ephemeral=True)
+    match load_choice:
+        case 'reload':
+            bot.reload_extension(cog_name)
+        case 'load':
+            bot.load_extension(cog_name)
+        case 'unload':
+            bot.unload_extension(cog_name)
+        case _:
+            await interaction.edit_original_response(content="Invalid cog choice.", ephemeral=True)
+    await interaction.edit_original_response(content=f"**Successfully {load_choice}ed {cog_name}!**")
+
+
+@cogs.command()
+@commands.is_owner()
+async def list_cogs(ctx):
+    if len(bot.cogs) == 0:
+        return await ctx.respond("No cogs loaded!", ephemeral=True)
+    await ctx.respond("Loaded cogs: ".join(map(str, bot.cogs)), ephemeral=True)
 
 
 console.log("[bold blue](init)[/] Performing cog initialization...")

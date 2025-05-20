@@ -19,6 +19,8 @@ class Chatbot(commands.Cog):
                 self.bot.console.log(error)
                 exit(1)
 
+        # put a test ping here, disable cog if ping fails
+
         self.bot.console.log("[bold blue](init cog)[/] Chatbot active")
 
     chatbot = discord.SlashCommandGroup("chatbot", "Chatbot relevant commands")
@@ -36,7 +38,7 @@ class Chatbot(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        if message.author.id != self.bot.user.id and message.channel.id == 1353259955733397597 and not self.bot.chatbot_thinking:
+        if message.author.id != self.bot.user.id and message.channel.id == 1353259955733397597 and not self.bot.chatbot_thinking and not message.guild.id == 1126958363012505640:
             self.bot.chatbot_thinking = True
 
             async with message.channel.typing():
