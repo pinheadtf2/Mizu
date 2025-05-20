@@ -70,16 +70,28 @@ class Chatbot(commands.Cog):
                 webhook = await self.bot.fetch_webhook(webhook_id)
             except discord.NotFound:
                 self.bot.console.log(
-                    f"[#d75f00 italic](warning) Webhook {webhook_id} for channel {channel_id} of guild {guild_id} was not found")
+                    f"[#d75f00 italic](warning)[/] Webhook {webhook_id} for channel {channel_id} of guild {guild_id} was not found")
             except discord.Forbidden:
                 self.bot.console.log(
-                    f"[#d75f00 italic](warning) Webhook {webhook_id} for channel {channel_id} of guild {guild_id} is forbidden")
+                    f"[#d75f00 italic](warning)[/] Webhook {webhook_id} for channel {channel_id} of guild {guild_id} is forbidden")
         else:
-            webhook = await channel.create_webhook(name="pinbot Integrations",
-                                                   reason="[Chatbot] Setting up new webhook for persona messages")
-            await self.bot.database_connection.execute(
-                f"INSERT INTO webhooks (webhook_id, channel_id, guild_id) VALUES ({webhook.id}, {webhook.channel_id}, {webhook.guild_id})", )
-            await self.bot.database_connection.commit()
+            channel_webhooks = await channel.webhooks()
+            if channel_webhooks:
+                for webhook in channel_webhooks:
+                    if webhook.user.id != self.bot.user.id:
+                        channel_webhooks.remove(webhook)
+
+                if len(channel_webhooks) > 1:
+                    self.bot.console.log(
+                        f"[#d75f00 italic](warning)[/] Multiple webhooks found for channel {channel.id} of guild {channel.guild.id}, deleting extras")
+
+                webhook = channel_webhooks[0]
+            else:
+                webhook = await channel.create_webhook(name="pinbot Integrations",
+                                                       reason="[Chatbot] Setting up new webhook for persona messages")
+                await self.bot.database_connection.execute(
+                    f"INSERT INTO webhooks (webhook_id, channel_id, guild_id) VALUES ({webhook.id}, {webhook.channel_id}, {webhook.guild_id})", )
+                await self.bot.database_connection.commit()
 
         self.bot.webhook_cache[channel.id] = webhook
         return webhook
