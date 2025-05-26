@@ -4,15 +4,16 @@ from os import getenv, listdir
 from os.path import isfile
 from time import time
 
+from api.sqlite.maintainer import create_database
+
 import aiosqlite
 import discord
 import yaml
+import aiohttp
 from discord import option
 from discord.ext import commands
 from dotenv import load_dotenv
 from rich.console import Console
-
-from api.sqlite.maintainer import create_database
 
 start_time = time()
 load_dotenv()
@@ -35,6 +36,7 @@ bot = discord.Bot(
     status=discord.Status.dnd,
     activity=discord.CustomActivity(name="Initializing...", status=discord.Status.do_not_disturb)
 )
+bot.aiohttp_session = None
 bot.console = console
 bot.webhook_cache = {}
 bot.core_settings = settings[0]
@@ -46,6 +48,7 @@ console.log("[bold blue](init)[/] Bot created")
 
 @bot.event
 async def on_ready():
+    bot.aiohttp_session = aiohttp.ClientSession()
     bot.database_connection = await aiosqlite.connect(settings[0]['sqlite_database'])
     await bot.change_presence(activity=discord.CustomActivity(name="Hello!", status=discord.Status.online))
     bot.console.log(
@@ -133,7 +136,7 @@ cogs = admin.create_subgroup("cogs", "Cog-related commands")
 async def get_loaded_cogs():
     loaded_cogs = []
     for loaded_cog in list(bot.cogs):
-        loaded_cogs.append(f"cogs.{loaded_cog}.{loaded_cog}".lower())
+        loaded_cogs.append(f"cogs.{loaded_cog}".lower())
     return loaded_cogs
 
 
