@@ -56,7 +56,6 @@ class BetterLinks(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot:
-            self.bot.console.log("caught")
             return
 
         extracted_links = re.findall(r'https?://\S+', message.content)
@@ -69,11 +68,9 @@ class BetterLinks(commands.Cog):
             clean_netloc = url.netloc.lower().removeprefix("www.")
             new_netloc = netloc_map.get(clean_netloc)
             if not new_netloc:
-                self.bot.console.log(link, new_netloc)
                 continue
 
             converted_link = f"{url.scheme}://{new_netloc}{url.path}"
-            self.bot.console.log(link, "-->", converted_link)
 
             if new_netloc == "vxtwitter.com":
                 vxtwitter_links.append(converted_link)
@@ -83,7 +80,6 @@ class BetterLinks(commands.Cog):
                 other_links.append(converted_link)
 
         if vxtwitter_links:
-            self.bot.console.log(vxtwitter_links, media_links, other_links)
             view = TwitterActionView(message, vxtwitter_links, media_links, other_links)
             await message.channel.send(
                 "Choose how to handle Twitter links:\n-# Deletes in 15 seconds",
